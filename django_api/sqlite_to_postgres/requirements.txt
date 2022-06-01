@@ -1,0 +1,7 @@
+flake8
+python-dotenv
+sqlite3
+psycopg2
+dataclasses
+
+

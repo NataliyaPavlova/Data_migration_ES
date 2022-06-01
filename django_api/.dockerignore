@@ -1,0 +1,31 @@
+*.sqlite3
+*.json
+*.tar.gz
+build.sh
+
+# Django
+/media/
+/static/
+/db/
+/logs/
+/public/
+
+#Python and others
+**/__pycache__
+**/*.pyc
+**/*.swp
+/venv/
+/tmp/
+/.vagrant/
+/Vagrantfile.local
+node_modules/
+/npm-debug.log
+/.idea/
+.vscode
+coverage
+.python-version
+
+#Distribution 
+.git/
+
+
