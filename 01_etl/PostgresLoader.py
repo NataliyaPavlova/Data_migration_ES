@@ -50,8 +50,7 @@ class PostgresLoader:
                 rows = cur.fetchmany(arraysize)
                 if not rows:
                     break
-                for row in rows:
-                    yield row
+                yield rows
         except (Exception, psycopg2.DatabaseError) as error:
             logging.error("Error: {0}".format(error))
             self.conn.rollback()

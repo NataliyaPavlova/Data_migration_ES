@@ -2,6 +2,8 @@ from pydantic import BaseModel
 import uuid
 from typing import Union, List, Dict
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
+import logging
 
 
 class Movies(BaseModel):
@@ -128,4 +130,26 @@ body = {
 
 def create_index(es):
     es.indices.create(index="movies", body=body)
+
+
+class ETLLoader:
+
+    def __init__(self, es: Elasticsearch):
+        self.fields = Movies.__annotations__.keys()
+        self.es = es
+        logging.info('Initialization of Elastic....')
+
+    def load_to_elastic(self, batch: list):
+        etl_batch = []
+        for row in list(batch)[0]:
+            dict_row = {key: val for (key, val) in zip(self.fields, row)}
+            etl_row = Movies(**dict_row)
+            etl_batch.append({'index': {'_id': etl_row.id}})
+            etl_batch.append(etl_row.dict())
+        resp = self.es.bulk(index="movies", body=etl_batch)
+        self.es.search(body={"query": {"match_all": {}}}, index='movies')
+        self.es.indices.get_mapping(index='movies')
+
+
+
 
