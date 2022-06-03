@@ -1,4 +1,5 @@
 import logging
+
 from psycopg2.extensions import connection as _connection
 
 
@@ -9,29 +10,29 @@ class PostgresLoader:
         logging.info('initialization of Postgres Data Loader.....')
 
     def load_changed_data(self, ts: str, arraysize=50):
-
+        """ Get filmwork data modified after given ts"""
         query = "SELECT fw.id, " \
-                        "fw.rating, " \
-                        "COALESCE (ARRAY_AGG(DISTINCT g.name), '{}') genre, " \
-                        "fw.title, " \
-                        "fw.description, " \
-                        "COALESCE (ARRAY_AGG(DISTINCT p.full_name) " \
-                                   "FILTER(WHERE pfw.role = 'director'), " \
-                                   "'{}') director, " \
-                        "COALESCE (ARRAY_AGG(DISTINCT p.full_name) " \
-                                   "FILTER(WHERE pfw.role = 'actor'), " \
-                                   "'{}') actors_names, " \
-                        "COALESCE (ARRAY_AGG(DISTINCT p.full_name) " \
-                                   "FILTER(WHERE pfw.role = 'writer'), " \
-                                   "'{}') writers_names, " \
-                        "COALESCE (JSON_AGG(DISTINCT jsonb_build_object( " \
-                                            "'id', p.id, 'name', p.full_name) " \
-                                            ") FILTER(WHERE pfw.role = 'actor')," \
-                                    "'[]') actors, " \
-                        "COALESCE (JSON_AGG(DISTINCT jsonb_build_object( " \
-                                           "'id', p.id, 'name', p.full_name) " \
-                                            ") FILTER(WHERE pfw.role = 'writer'), " \
-                                    "'[]') writer " \
+                "fw.rating, " \
+                "COALESCE (ARRAY_AGG(DISTINCT g.name), '{}') genre, " \
+                "fw.title, " \
+                "fw.description, " \
+                "COALESCE (ARRAY_AGG(DISTINCT p.full_name) " \
+                "FILTER(WHERE pfw.role = 'director'), " \
+                "'{}') director, " \
+                "COALESCE (ARRAY_AGG(DISTINCT p.full_name) " \
+                "FILTER(WHERE pfw.role = 'actor'), " \
+                "'{}') actors_names, " \
+                "COALESCE (ARRAY_AGG(DISTINCT p.full_name) " \
+                "FILTER(WHERE pfw.role = 'writer'), " \
+                "'{}') writers_names, " \
+                "COALESCE (JSON_AGG(DISTINCT jsonb_build_object( " \
+                "'id', p.id, 'name', p.full_name) " \
+                ") FILTER(WHERE pfw.role = 'actor')," \
+                "'[]') actors, " \
+                "COALESCE (JSON_AGG(DISTINCT jsonb_build_object( " \
+                "'id', p.id, 'name', p.full_name) " \
+                ") FILTER(WHERE pfw.role = 'writer'), " \
+                "'[]') writer " \
                 "FROM content.film_work fw " \
                 "LEFT JOIN content.person_film_work pfw ON pfw.film_work_id = fw.id " \
                 "LEFT JOIN content.person p ON p.id = pfw.person_id " \
@@ -53,4 +54,3 @@ class PostgresLoader:
 
         logging.info('Extracted {} rows from Postgres'.format(arraysize))
         return rows, last_modified_at
-

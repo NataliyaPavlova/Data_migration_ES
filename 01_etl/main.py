@@ -2,10 +2,15 @@ import logging
 from datetime import datetime
 from time import sleep
 
+from ESLoader import ESLoader
+from ESLoader import create_index
 from PostgresLoader import PostgresLoader
-from settings import DATABASES, FILE_PATHS
-from ESLoader import create_index, ESLoader
-from utils import JsonFileStorage, State, pg_conn_context, es_conn_context
+from settings import DATABASES
+from settings import FILE_PATHS
+from utils import JsonFileStorage
+from utils import State
+from utils import es_conn_context
+from utils import pg_conn_context
 
 logging.basicConfig(
     filename='data_migration.log',

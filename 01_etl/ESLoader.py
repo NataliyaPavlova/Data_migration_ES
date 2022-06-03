@@ -1,9 +1,11 @@
-from pydantic import BaseModel
-import uuid
-from typing import Union, List, Dict
-from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk
 import logging
+import uuid
+from typing import Dict
+from typing import List
+from typing import Union
+
+from elasticsearch import Elasticsearch
+from pydantic import BaseModel
 
 
 class Movies(BaseModel):
@@ -20,115 +22,116 @@ class Movies(BaseModel):
 
 
 body = {
-  "settings": {
-    "refresh_interval": "1s",
-    "analysis": {
-      "filter": {
-        "english_stop": {
-          "type":       "stop",
-          "stopwords":  "_english_"
-        },
-        "english_stemmer": {
-          "type": "stemmer",
-          "language": "english"
-        },
-        "english_possessive_stemmer": {
-          "type": "stemmer",
-          "language": "possessive_english"
-        },
-        "russian_stop": {
-          "type":       "stop",
-          "stopwords":  "_russian_"
-        },
-        "russian_stemmer": {
-          "type": "stemmer",
-          "language": "russian"
+    "settings": {
+        "refresh_interval": "1s",
+        "analysis": {
+            "filter": {
+                "english_stop": {
+                    "type": "stop",
+                    "stopwords": "_english_"
+                },
+                "english_stemmer": {
+                    "type": "stemmer",
+                    "language": "english"
+                },
+                "english_possessive_stemmer": {
+                    "type": "stemmer",
+                    "language": "possessive_english"
+                },
+                "russian_stop": {
+                    "type": "stop",
+                    "stopwords": "_russian_"
+                },
+                "russian_stemmer": {
+                    "type": "stemmer",
+                    "language": "russian"
+                }
+            },
+            "analyzer": {
+                "ru_en": {
+                    "tokenizer": "standard",
+                    "filter": [
+                        "lowercase",
+                        "english_stop",
+                        "english_stemmer",
+                        "english_possessive_stemmer",
+                        "russian_stop",
+                        "russian_stemmer"
+                    ]
+                }
+            }
         }
-      },
-      "analyzer": {
-        "ru_en": {
-          "tokenizer": "standard",
-          "filter": [
-            "lowercase",
-            "english_stop",
-            "english_stemmer",
-            "english_possessive_stemmer",
-            "russian_stop",
-            "russian_stemmer"
-          ]
-        }
-      }
-    }
-  },
-  "mappings": {
-    "dynamic": "strict",
-    "properties": {
-      "id": {
-        "type": "keyword"
-      },
-      "imdb_rating": {
-        "type": "float"
-      },
-      "genre": {
-        "type": "keyword"
-      },
-      "title": {
-        "type": "text",
-        "analyzer": "ru_en",
-        "fields": {
-          "raw": {
-            "type":  "keyword"
-          }
-        }
-      },
-      "description": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "director": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "actors_names": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "writers_names": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "actors": {
-        "type": "nested",
+    },
+    "mappings": {
         "dynamic": "strict",
         "properties": {
-          "id": {
-            "type": "keyword"
-          },
-          "name": {
-            "type": "text",
-            "analyzer": "ru_en"
-          }
+            "id": {
+                "type": "keyword"
+            },
+            "imdb_rating": {
+                "type": "float"
+            },
+            "genre": {
+                "type": "keyword"
+            },
+            "title": {
+                "type": "text",
+                "analyzer": "ru_en",
+                "fields": {
+                    "raw": {
+                        "type": "keyword"
+                    }
+                }
+            },
+            "description": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "director": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "actors_names": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "writers_names": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "actors": {
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": {
+                    "id": {
+                        "type": "keyword"
+                    },
+                    "name": {
+                        "type": "text",
+                        "analyzer": "ru_en"
+                    }
+                }
+            },
+            "writers": {
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": {
+                    "id": {
+                        "type": "keyword"
+                    },
+                    "name": {
+                        "type": "text",
+                        "analyzer": "ru_en"
+                    }
+                }
+            }
         }
-      },
-      "writers": {
-        "type": "nested",
-        "dynamic": "strict",
-        "properties": {
-          "id": {
-            "type": "keyword"
-          },
-          "name": {
-            "type": "text",
-            "analyzer": "ru_en"
-          }
-        }
-      }
     }
-  }
 }
 
 
 def create_index(es):
+    """Create movies index in Elastic before data uploading"""
     es.indices.create(index="movies", body=body)
 
 
@@ -140,6 +143,7 @@ class ESLoader:
         logging.info('Initialization of Elastic....')
 
     def load_to_elastic(self, batch: list):
+        """Transform, validate and load Postgres data to Elastic"""
         etl_batch = []
         for row in batch:
             dict_row = {key: val for (key, val) in zip(self.fields, row)}
@@ -147,8 +151,4 @@ class ESLoader:
             etl_batch.append({'index': {'_id': etl_row.id}})
             etl_batch.append(etl_row.dict())
         self.es.bulk(index="movies", body=etl_batch)
-        logging.info('Inserted {} docs to Elasticsearch'.format(len(etl_batch)/2))
-
-
-
-
+        logging.info('Inserted {} docs to Elasticsearch'.format(len(etl_batch) / 2))
