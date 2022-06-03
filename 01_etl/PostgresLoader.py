@@ -1,6 +1,4 @@
 import logging
-
-import psycopg2
 from psycopg2.extensions import connection as _connection
 
 
@@ -10,7 +8,7 @@ class PostgresLoader:
         self.conn = connection
         logging.info('initialization of Postgres Data Loader.....')
 
-    def load_changed_data(self, ts: str, arraysize=500):
+    def load_changed_data(self, ts: str, arraysize=50):
 
         query = "SELECT fw.id, " \
                         "fw.rating, " \
@@ -43,15 +41,16 @@ class PostgresLoader:
                 "GROUP BY fw.id " \
                 "ORDER BY fw.updated_at" % ts
 
-        try:
-            cur = self.conn.cursor()
-            cur.execute(query)
-            while True:
-                rows = cur.fetchmany(arraysize)
-                if not rows:
-                    break
-                yield rows
-        except (Exception, psycopg2.DatabaseError) as error:
-            logging.error("Error: {0}".format(error))
-            self.conn.rollback()
+        cur = self.conn.cursor()
+        cur.execute(query)
+        rows = cur.fetchmany(arraysize)
+
+        # retrieve last_modified_at to save the state
+        last_modified_row_id = rows[-1]['id']
+        query_for_state = "SELECT updated_at from content.film_work WHERE id = '%s'" % last_modified_row_id
+        cur.execute(query_for_state)
+        last_modified_at = cur.fetchone()[0].date().isoformat()
+
+        logging.info('Extracted {} rows from Postgres'.format(arraysize))
+        return rows, last_modified_at
 

@@ -132,7 +132,7 @@ def create_index(es):
     es.indices.create(index="movies", body=body)
 
 
-class ETLLoader:
+class ESLoader:
 
     def __init__(self, es: Elasticsearch):
         self.fields = Movies.__annotations__.keys()
@@ -141,14 +141,13 @@ class ETLLoader:
 
     def load_to_elastic(self, batch: list):
         etl_batch = []
-        for row in list(batch)[0]:
+        for row in batch:
             dict_row = {key: val for (key, val) in zip(self.fields, row)}
             etl_row = Movies(**dict_row)
             etl_batch.append({'index': {'_id': etl_row.id}})
             etl_batch.append(etl_row.dict())
-        resp = self.es.bulk(index="movies", body=etl_batch)
-        self.es.search(body={"query": {"match_all": {}}}, index='movies')
-        self.es.indices.get_mapping(index='movies')
+        self.es.bulk(index="movies", body=etl_batch)
+        logging.info('Inserted {} docs to Elasticsearch'.format(len(etl_batch)/2))
 
 
 

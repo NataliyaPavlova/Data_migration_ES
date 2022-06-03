@@ -16,3 +16,7 @@ DATABASES = {
         'port': os.environ.get('DB_PORT_ETL'),
     },
 }
+
+FILE_PATHS = {
+    'state': os.environ.get('FILE_PATH_STATE'),
+}

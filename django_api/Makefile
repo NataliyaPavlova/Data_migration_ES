@@ -2,8 +2,14 @@ help:
 	@echo "Docker Compose Help"
 	@echo "-----------------------"
 	@echo ""
+	@echo "To start working (django, Postgres, Elastic):"
+	@echo "    make start"
+	@echo ""
 	@echo "To up containers from docker-compose.yml:"
 	@echo "    make up"
+	@echo ""
+	@echo "To up Elastic container:"
+	@echo "    make etl"
 	@echo ""
 	@echo "To build:"
 	@echo "    make build"
@@ -21,7 +27,10 @@ help:
 	@echo "    make clean"
 	@echo ""
 
-start: up migrate collectstatic
+start: up migrate collectstatic etl
+
+etl:
+	@docker run -p 9200:9200 -e "discovery.type=single-node" elasticsearch:7.16.2
 
 up:
 	@docker-compose -f docker-compose.yml up -d

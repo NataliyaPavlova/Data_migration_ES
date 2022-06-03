@@ -1,15 +1,14 @@
-from elasticsearch import Elasticsearch
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime
+from time import sleep
+
 from PostgresLoader import PostgresLoader
-from pprint import pprint
-import psycopg2
-from psycopg2.extras import DictCursor
-from settings import DATABASES
-from ETLIndex import Movies, create_index, ETLLoader
+from settings import DATABASES, FILE_PATHS
+from ESLoader import create_index, ESLoader
+from utils import JsonFileStorage, State, pg_conn_context, es_conn_context
 
 logging.basicConfig(
-    filename='data_migration_log.log',
+    filename='data_migration.log',
     level=logging.DEBUG
 )
 
@@ -17,18 +16,33 @@ logging.basicConfig(
 def main():
     dsl = DATABASES['postgres']
     dsl_etl = DATABASES['elastic']
-    ts = datetime.now() - timedelta(days=456, seconds=10)
-    logging.info("Starting....")
-    with psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn, \
-            Elasticsearch([dsl_etl,], scheme="http", verify_certs=False) as es:
-        pg_data_loader = PostgresLoader(pg_conn)
-        etl_loader = ETLLoader(es)
+    sleep_seconds = 10
+    storage = JsonFileStorage(FILE_PATHS['state'])
+    s = State(storage)
+    key = "last_modified_at"
 
-        if not es.indices.exists(index="movies"):
-            create_index(es)
+    while True:
+        state = s.get_state(key)
+        if not state:
+            state = datetime.min.date().isoformat()
+            logging.info('File with the state is empty. Start working from {}'.format(state))
 
-        batch = pg_data_loader.load_changed_data(ts.date().isoformat())
-        etl_loader.load_to_elastic(batch)
+        logging.info('Start working from {} from file'.format(state))
+
+        with pg_conn_context(dsl) as pg_conn, es_conn_context(dsl_etl) as es:
+            pg_data_loader = PostgresLoader(pg_conn)
+            etl_loader = ESLoader(es)
+
+            if not es.indices.exists(index="movies"):
+                create_index(es)
+
+            batch, ts = pg_data_loader.load_changed_data(state)
+            etl_loader.load_to_elastic(batch)
+
+            s.set_state(key, ts)
+
+        logging.info('Sleeping for {} seconds'.format(sleep_seconds))
+        sleep(sleep_seconds)
 
 
 if __name__ == '__main__':
