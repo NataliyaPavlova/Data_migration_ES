@@ -38,9 +38,18 @@ class PostgresLoader:
                 "LEFT JOIN content.person p ON p.id = pfw.person_id " \
                 "LEFT JOIN content.genre_film_work gfw ON gfw.film_work_id = fw.id " \
                 "LEFT JOIN content.genre g ON g.id = gfw.genre_id " \
-                "WHERE fw.updated_at > '%s' " \
+                "WHERE fw.id in (SELECT DISTINCT pfw.film_work_id " \
+                "                FROM content.person p " \
+                "                LEFT JOIN content.person_film_work pfw ON p.id = pfw.person_id " \
+                "                WHERE p.updated_at > '%s' " \
+                "                UNION " \
+                "                SELECT DISTINCT gfw.film_work_id " \
+                "                FROM content.genre g " \
+                "                LEFT JOIN content.genre_film_work gfw ON g.id = gfw.genre_id " \
+                "                WHERE g.updated_at > '%s') " \
+                "OR fw.updated_at > '%s' " \
                 "GROUP BY fw.id " \
-                "ORDER BY fw.updated_at" % ts
+                "ORDER BY fw.updated_at" % (ts, ts, ts)
 
         cur = self.conn.cursor()
         cur.execute(query)

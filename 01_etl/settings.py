@@ -1,23 +1,28 @@
-import os
+from pydantic import BaseSettings
+from pydantic import Field
 
-from dotenv import load_dotenv
 
-load_dotenv()
+class PSSettings(BaseSettings):
+    dbname: str = Field(..., env="DB_NAME_PSTGR")
+    user: str = Field(..., env="DB_USER_PSTGR")
+    password: str = Field(..., env="DB_PASSWORD_PSTGR")
+    host: str = Field(..., env="DB_HOST_PSTGR")
+    port: int = Field(..., env="DB_PORT_PSTGR")
 
-DATABASES = {
-    'postgres': {
-        'dbname': os.environ.get('DB_NAME_PSTGR'),
-        'user': os.environ.get('DB_USER_PSTGR'),
-        'password': os.environ.get('DB_PASSWORD_PSTGR'),
-        'host': os.environ.get('DB_HOST_PSTGR'),
-        'port': os.environ.get('DB_PORT_PSTGR'),
-    },
-    'elastic': {
-        'host': os.environ.get('DB_HOST_ETL'),
-        'port': os.environ.get('DB_PORT_ETL'),
-    },
-}
+    class Config:
+        env_file = '.env'
 
-FILE_PATHS = {
-    'state': os.environ.get('FILE_PATH_STATE'),
-}
+
+class ESSettings(BaseSettings):
+    es_host: str = Field(..., env="DB_HOST_ETL")
+    es_port: int = Field(..., env="DB_PORT_ETL")
+
+    class Config:
+        env_file = '.env'
+
+
+class StateSettings(BaseSettings):
+    state_file: str = Field(..., env="FILE_PATH_STATE")
+
+    class Config:
+        env_file = '.env'
