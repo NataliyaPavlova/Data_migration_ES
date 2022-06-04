@@ -13,12 +13,12 @@ from psycopg2.extras import DictCursor
 
 
 @contextmanager
-def pg_conn_context(dsl: dict):
-    @backoff('postgres')
-    def connect():
+def pg_conn_context(dsl: dict, log: logging):
+    @backoff(log)
+    def connect_postgres():
         return psycopg2.connect(**dsl, cursor_factory=DictCursor)
 
-    conn = connect()
+    conn = connect_postgres()
     try:
         yield conn
     finally:
@@ -26,21 +26,21 @@ def pg_conn_context(dsl: dict):
 
 
 @contextmanager
-def es_conn_context(dsl: dict):
-    @backoff('elasticsearch')
-    def connect():
+def es_conn_context(dsl: dict, log: logging):
+    @backoff(log)
+    def connect_elastic():
         es = Elasticsearch([dsl, ])
         es.info()
         return es
 
-    conn = connect()
+    conn = connect_elastic()
     try:
         yield conn
     finally:
         conn.close()
 
 
-def backoff(name, start_sleep_time=10, factor=2, border_sleep_time=20):
+def backoff(log, start_sleep_time=10, factor=2, border_sleep_time=20):
     def func_wrapper(func):
         @wraps(func)
         def inner(*args, **kwargs):
@@ -54,7 +54,7 @@ def backoff(name, start_sleep_time=10, factor=2, border_sleep_time=20):
                         if sleep_time < border_sleep_time
                         else border_sleep_time
                     )
-                    logging.info('Failed to connect to {}, sleeping for {} seconds'.format(name, sleep_time))
+                    log.info('Lost connection in {}, sleeping for {} seconds'.format(func.__name__, sleep_time))
                     sleep(sleep_time)
                     n += 1
 
